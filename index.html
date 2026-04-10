@@ -213,7 +213,7 @@ function getProdColor(key){return PRODUCTS.find(p=>p.key===key)?.color||'#7b82a0
 async function fetchSheet(sheet){
   return new Promise((resolve,reject)=>{
     const cb='_gviz_'+sheet.replace(/\W/g,'')+'_'+Date.now();
-    const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json%3BresponseHandler:${cb}&sheet=${encodeURIComponent(sheet)}&headers=3`;
+    const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:${cb}&sheet=${encodeURIComponent(sheet)}&headers=3`;
     window[cb]=function(data){
       delete window[cb];document.getElementById('_s_'+cb)?.remove();
       if(data&&data.table)resolve(data.table);
@@ -234,7 +234,7 @@ function pDate(v){
   if(m)return new Date(+m[1],+m[2],+m[3]);
   const d=new Date(v);return isNaN(d)?null:d;
 }
-function fmt(d){return d?d.toISOString().slice(0,10):null;}
+function fmt(d){if(!d)return null;const y=d.getFullYear();const m=String(d.getMonth()+1).padStart(2,'0');const day=String(d.getDate()).padStart(2,'0');return`${y}-${m}-${day}`;}
 function avg(a){return a.length?a.reduce((x,y)=>x+y,0)/a.length:0;}
 function fmtL(v){if(!v&&v!==0)return'—';if(v>=1e7)return'₹'+(v/1e7).toFixed(1)+'Cr';if(v>=1e5)return'₹'+(v/1e5).toFixed(1)+'L';if(v>=1e3)return'₹'+(v/1e3).toFixed(0)+'K';return'₹'+Math.round(v);}
 function sd(d){return d?d.slice(5):'';}
@@ -261,18 +261,18 @@ function parseDailyTable(tbl){
 
 function parseASWCTable(tbl){
   if(!tbl||!tbl.rows)return[];
-  const cols=tbl.cols.map(c=>c.label.toLowerCase().trim());
-  const ci=n=>cols.findIndex(h=>h.includes(n));
-  const dI=ci('date'),nI=ci('ad set name');
-  const spI=ci('that day spend')>=0?ci('that day spend'):ci('spend');
+  // Use positional indices — ASWC column labels are unreliable with merged headers
+  // col 0=Date, col 1=Brand, col 2=Ad Set Name, col 3=Ad ID,
+  // col 4=Spend, col 5=NCs, col 6=CAC, col 26=CTR, col 27=CPC, col 28=CPM
   const rows=[];
   for(const row of tbl.rows){
     if(!row.c)continue;
-    const g=i=>(i>=0&&row.c[i])?row.c[i].v:null;
-    const d=pDate(g(dI>=0?dI:0));if(!d)continue;
-    const ds=fmt(d);const adSet=g(nI>=0?nI:2);if(!adSet)continue;
-    const sp=pNum(g(spI>=0?spI:4));if(!sp||sp<=0)continue;
-    rows.push({date:ds,adSet:String(adSet),prodKey:getProdKey(String(adSet)),spends:sp,ncs:pNum(g(ci('ncs')))||0,cac:pNum(g(ci('cac'))),roas:pNum(g(ci('roas'))),ctr:pNum(g(ci('ctr'))),hookRate:pNum(g(ci('hook')))});
+    const g=i=>(i>=0&&row.c[i]!=null)?row.c[i].v:null;
+    const d=pDate(g(0));if(!d)continue;
+    const ds=fmt(d);
+    const adSet=g(2);if(!adSet)continue;
+    const sp=pNum(g(4));if(!sp||sp<=0)continue;
+    rows.push({date:ds,adSet:String(adSet),prodKey:getProdKey(String(adSet)),spends:sp,ncs:pNum(g(5))||0,cac:pNum(g(6)),roas:null,ctr:pNum(g(26)),hookRate:null});
   }
   return rows;
 }
