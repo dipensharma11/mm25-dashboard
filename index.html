@@ -119,7 +119,7 @@ tr:last-child td{border:none}
     <div class="sep"></div>
     <div class="filter-group">
       <span class="filter-label">Ad name</span>
-      <input type="text" id="adSearch" placeholder="Search ad set…" style="width:190px">
+      <input type="text" id="adSearch" placeholder="Search ad set…" style="width:190px" oninput="applyFilters()" onkeydown="if(event.key==='Enter')applyFilters()">
     </div>
     <div class="sep"></div>
     <div class="prod-pills" id="prodPills"></div>
